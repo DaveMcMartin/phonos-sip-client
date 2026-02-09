@@ -11,3 +11,7 @@ CLANG_WARN_OBJC_REPEATED_USE_OF_WEAK = YES
 CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES
 GCC_WARN_SHADOW = YES
 CLANG_WARN_UNREACHABLE_CODE = YES
+
+// Workaround for Xcode 26.2 beta deployment target bug
+OTHER_CFLAGS = $(inherited) -mmacos-version-min=10.15
+OTHER_CPLUSPLUSFLAGS = $(inherited) -mmacos-version-min=10.15

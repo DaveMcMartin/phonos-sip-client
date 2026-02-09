@@ -1,2 +1,6 @@
 #include? "Pods/Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"
 #include "ephemeral/Flutter-Generated.xcconfig"
+
+// Workaround for Xcode 26.2 deployment target bug
+OTHER_CFLAGS = $(inherited) -mmacos-version-min=10.15
+OTHER_CPLUSPLUSFLAGS = $(inherited) -mmacos-version-min=10.15
