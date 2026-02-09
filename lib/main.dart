@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/sip_service.dart';
+import 'services/log_service.dart';
 import 'pages/dialpad_page.dart';
 import 'pages/call_history_page.dart';
 import 'pages/configuration_page.dart';
 
 void main() {
+  final originalDebugPrint = debugPrint;
+
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) {
+      LogService().addLog(message);
+    }
+    originalDebugPrint(message, wrapWidth: wrapWidth);
+  };
+
   runApp(const PhonosSipClient());
 }
 
@@ -14,8 +24,11 @@ class PhonosSipClient extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => SipService(),
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => SipService()),
+        ChangeNotifierProvider(create: (_) => LogService()),
+      ],
       child: MaterialApp(
         title: 'Phonos SIP Client',
         theme: ThemeData(

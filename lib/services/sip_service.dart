@@ -86,29 +86,54 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
     _initialize();
   }
 
-  Future<void> _checkPermissions() async {
-    if (kIsWeb) return;
-
+  Future<bool> _checkPermissions({bool requestCamera = false}) async {
+    debugPrint('Checking permissions. RequestCamera: $requestCamera');
     try {
       if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
         var microphoneStatus = await Permission.microphone.status;
+        debugPrint('Microphone status: $microphoneStatus');
         if (microphoneStatus.isDenied) {
-          await Permission.microphone.request();
+          debugPrint('Requesting microphone permission...');
+          microphoneStatus = await Permission.microphone.request();
+          debugPrint('Microphone permission result: $microphoneStatus');
         }
 
-        var cameraStatus = await Permission.camera.status;
-        if (cameraStatus.isDenied) {
-          await Permission.camera.request();
+        if (microphoneStatus.isPermanentlyDenied) {
+          debugPrint('Microphone permission permanently denied');
+          return false;
         }
+
+        if (!microphoneStatus.isGranted) return false;
+
+        if (requestCamera) {
+          var cameraStatus = await Permission.camera.status;
+          debugPrint('Camera status: $cameraStatus');
+          if (cameraStatus.isDenied) {
+            debugPrint('Requesting camera permission...');
+            cameraStatus = await Permission.camera.request();
+            debugPrint('Camera permission result: $cameraStatus');
+          }
+
+          if (cameraStatus.isPermanentlyDenied) {
+            debugPrint('Camera permission permanently denied');
+            return false;
+          }
+
+          if (!cameraStatus.isGranted) return false;
+        }
+
+        return true;
       }
     } catch (e) {
-      debugPrint('Warning: Failed to check/request permissions: $e');
+      debugPrint('Error checking permissions: $e');
+      return true;
     }
+    return true;
   }
 
   Future<void> _initialize() async {
-    await _checkPermissions();
     await _localRenderer.initialize();
+    await _remoteRenderer.initialize();
     await _remoteRenderer.initialize();
 
     _configuration = await _configRepository.getConfiguration();
@@ -202,7 +227,13 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
   }
 
   Future<void> call(String destination, {bool video = false}) async {
-    await _checkPermissions();
+    if (!await _checkPermissions(requestCamera: video)) {
+      _lastCallError =
+          'Permissions denied. Please enable microphone${video ? ' and camera' : ''}.';
+      notifyListeners();
+      return;
+    }
+
     if (!isRegistered) {
       throw Exception('Not registered');
     }
@@ -214,7 +245,13 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
   }
 
   Future<void> answer({bool video = false}) async {
-    await _checkPermissions();
+    if (!await _checkPermissions(requestCamera: video)) {
+      _lastCallError =
+          'Permissions denied. Please enable microphone${video ? ' and camera' : ''}.';
+      notifyListeners();
+      return;
+    }
+
     if (_currentCall == null) return;
 
     final options = _helper.buildCallOptions(!video);
@@ -248,7 +285,12 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
   }
 
   Future<void> toggleVideo() async {
-    await _checkPermissions();
+    if (!await _checkPermissions(requestCamera: true)) {
+      _lastCallError = 'Permissions denied. Please enable camera.';
+      notifyListeners();
+      return;
+    }
+
     if (_currentCall == null) return;
 
     try {
@@ -333,6 +375,7 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
 
   @override
   void callStateChanged(Call call, CallState state) {
+    debugPrint('Call state changed: ${state.state}');
     _currentCall = call;
 
     switch (state.state) {

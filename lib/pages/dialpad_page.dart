@@ -278,6 +278,7 @@ class CallScreen extends StatelessWidget {
         children: [
           if (hasVideo &&
               (callState == CallStateEnum.CONFIRMED ||
+                  callState == CallStateEnum.ACCEPTED ||
                   callState == CallStateEnum.STREAM))
             Positioned.fill(
               child: RTCVideoView(
@@ -293,7 +294,9 @@ class CallScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (!hasVideo || callState != CallStateEnum.CONFIRMED) ...[
+                    if (!hasVideo ||
+                        (callState != CallStateEnum.CONFIRMED &&
+                            callState != CallStateEnum.ACCEPTED)) ...[
                       _buildCallStateIndicator(context, callState),
                       const SizedBox(height: 48),
                       CircleAvatar(
@@ -323,6 +326,7 @@ class CallScreen extends StatelessWidget {
 
                     const SizedBox(height: 16),
                     if (callState == CallStateEnum.CONFIRMED ||
+                        callState == CallStateEnum.ACCEPTED ||
                         callState == CallStateEnum.HOLD ||
                         callState == CallStateEnum.MUTED)
                       Text(
@@ -344,6 +348,7 @@ class CallScreen extends StatelessWidget {
                         callState == CallStateEnum.CALL_INITIATION)
                       _buildIncomingCallButtons(context, sipService)
                     else if (callState == CallStateEnum.CONFIRMED ||
+                        callState == CallStateEnum.ACCEPTED ||
                         callState == CallStateEnum.HOLD ||
                         callState == CallStateEnum.MUTED)
                       _buildActiveCallButtons(context, sipService, hasVideo)
@@ -357,6 +362,7 @@ class CallScreen extends StatelessWidget {
 
           if (hasVideo &&
               (callState == CallStateEnum.CONFIRMED ||
+                  callState == CallStateEnum.ACCEPTED ||
                   callState == CallStateEnum.STREAM))
             Positioned(
               right: 20,

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:sip_ua/sip_ua.dart';
 import '../models/sip_configuration.dart';
 import '../services/sip_service.dart';
+import 'log_page.dart';
 
 class ConfigurationPage extends StatefulWidget {
   const ConfigurationPage({super.key});
@@ -503,6 +504,22 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
               backgroundColor: isRegistered ? Colors.orange : Colors.green,
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        IconButton(
+          onPressed: () {
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (context) => const LogPage()));
+          },
+          icon: const Icon(Icons.terminal),
+          tooltip: 'View Logs',
+          style: IconButton.styleFrom(
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest,
+            padding: const EdgeInsets.all(16),
           ),
         ),
       ],
