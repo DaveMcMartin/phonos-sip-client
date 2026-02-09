@@ -297,7 +297,11 @@ class CallScreen extends StatelessWidget {
                     if (!hasVideo ||
                         (callState != CallStateEnum.CONFIRMED &&
                             callState != CallStateEnum.ACCEPTED)) ...[
-                      _buildCallStateIndicator(context, callState),
+                      _buildCallStateIndicator(
+                        context,
+                        callState,
+                        isIncoming: isIncoming,
+                      ),
                       const SizedBox(height: 48),
                       CircleAvatar(
                         radius: 60,
@@ -345,12 +349,14 @@ class CallScreen extends StatelessWidget {
                       ),
                     const SizedBox(height: 48),
                     if (isIncoming &&
-                        callState == CallStateEnum.CALL_INITIATION)
+                        (callState == CallStateEnum.CALL_INITIATION ||
+                            callState == CallStateEnum.PROGRESS))
                       _buildIncomingCallButtons(context, sipService)
                     else if (callState == CallStateEnum.CONFIRMED ||
                         callState == CallStateEnum.ACCEPTED ||
                         callState == CallStateEnum.HOLD ||
-                        callState == CallStateEnum.MUTED)
+                        callState == CallStateEnum.MUTED ||
+                        callState == CallStateEnum.STREAM)
                       _buildActiveCallButtons(context, sipService, hasVideo)
                     else
                       _buildHangupButton(context, sipService),
@@ -360,7 +366,7 @@ class CallScreen extends StatelessWidget {
             ),
           ),
 
-          if (hasVideo &&
+          if (sipService.isCameraEnabled &&
               (callState == CallStateEnum.CONFIRMED ||
                   callState == CallStateEnum.ACCEPTED ||
                   callState == CallStateEnum.STREAM))
@@ -383,23 +389,31 @@ class CallScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildCallStateIndicator(BuildContext context, CallStateEnum state) {
+  Widget _buildCallStateIndicator(
+    BuildContext context,
+    CallStateEnum state, {
+    bool isIncoming = false,
+  }) {
     final theme = Theme.of(context);
     String stateText;
     Color stateColor;
 
     switch (state) {
       case CallStateEnum.CALL_INITIATION:
-        stateText = 'Incoming Call';
-        stateColor = Colors.blue;
+        stateText = isIncoming ? 'Incoming Call' : 'Calling...';
+        stateColor = isIncoming ? Colors.blue : Colors.orange;
         break;
       case CallStateEnum.CONNECTING:
         stateText = 'Connecting...';
         stateColor = Colors.orange;
         break;
       case CallStateEnum.PROGRESS:
-        stateText = 'Ringing...';
-        stateColor = Colors.orange;
+        stateText = isIncoming ? 'Incoming Call' : 'Ringing...';
+        stateColor = isIncoming ? Colors.blue : Colors.orange;
+        break;
+      case CallStateEnum.STREAM:
+        stateText = isIncoming ? 'Incoming Call' : 'Calling...';
+        stateColor = isIncoming ? Colors.blue : Colors.orange;
         break;
       case CallStateEnum.CONFIRMED:
         stateText = 'Connected';
@@ -462,17 +476,6 @@ class CallScreen extends StatelessWidget {
             child: const Icon(Icons.call, size: 32),
           ),
         ),
-        const SizedBox(width: 24),
-        SizedBox(
-          width: 72,
-          height: 72,
-          child: FloatingActionButton(
-            onPressed: () => sipService.answer(video: true),
-            backgroundColor: Colors.blue,
-            heroTag: 'answer_video',
-            child: const Icon(Icons.videocam, size: 32),
-          ),
-        ),
       ],
     );
   }
@@ -488,35 +491,12 @@ class CallScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             _buildActionButton(
-              icon: sipService.isMuted ? Icons.mic_off : Icons.mic,
-              label: 'Mute',
-              onPressed: sipService.toggleMute,
-              isActive: sipService.isMuted,
-              hasVideo: hasVideo,
-            ),
-            const SizedBox(width: 24),
-            _buildActionButton(
               icon: sipService.isCameraEnabled
                   ? Icons.videocam
                   : Icons.videocam_off,
               label: 'Camera',
               onPressed: sipService.toggleVideo,
               isActive: sipService.isCameraEnabled,
-              hasVideo: hasVideo,
-            ),
-            const SizedBox(width: 24),
-            _buildActionButton(
-              icon: Icons.dialpad,
-              label: 'Keypad',
-              onPressed: () => _showDtmfDialog(context, sipService),
-              hasVideo: hasVideo,
-            ),
-            const SizedBox(width: 24),
-            _buildActionButton(
-              icon: sipService.isOnHold ? Icons.play_arrow : Icons.pause,
-              label: 'Hold',
-              onPressed: sipService.toggleHold,
-              isActive: sipService.isOnHold,
               hasVideo: hasVideo,
             ),
           ],
@@ -575,74 +555,6 @@ class CallScreen extends StatelessWidget {
         onPressed: sipService.hangup,
         backgroundColor: Colors.red,
         child: const Icon(Icons.call_end, size: 32),
-      ),
-    );
-  }
-
-  void _showDtmfDialog(BuildContext context, SipService sipService) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text(
-                'DTMF Keypad',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 24),
-              _buildDtmfDialpad(sipService),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDtmfDialpad(SipService sipService) {
-    return Column(
-      children: [
-        _buildDtmfRow(['1', '2', '3'], sipService),
-        const SizedBox(height: 12),
-        _buildDtmfRow(['4', '5', '6'], sipService),
-        const SizedBox(height: 12),
-        _buildDtmfRow(['7', '8', '9'], sipService),
-        const SizedBox(height: 12),
-        _buildDtmfRow(['*', '0', '#'], sipService),
-      ],
-    );
-  }
-
-  Widget _buildDtmfRow(List<String> digits, SipService sipService) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: digits
-          .map((digit) => _buildDtmfButton(digit, sipService))
-          .toList(),
-    );
-  }
-
-  Widget _buildDtmfButton(String digit, SipService sipService) {
-    return SizedBox(
-      width: 60,
-      height: 60,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => sipService.sendDtmf(digit),
-          customBorder: const CircleBorder(),
-          child: Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.grey.withOpacity(0.3)),
-            ),
-            child: Center(
-              child: Text(digit, style: const TextStyle(fontSize: 24)),
-            ),
-          ),
-        ),
       ),
     );
   }

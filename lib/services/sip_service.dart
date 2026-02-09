@@ -265,6 +265,7 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
 
   Future<void> reject() async {
     if (_currentCall == null) return;
+    _audioPlayer.stop();
     _currentCall!.hangup();
   }
 
@@ -294,13 +295,30 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
     if (_currentCall == null) return;
 
     try {
-      final hasVideo =
-          _localStream?.getVideoTracks().any((track) => track.enabled) ?? false;
+      final videoTracks = _localStream?.getVideoTracks() ?? [];
 
-      if (hasVideo) {
-        _currentCall!.mute(false, true);
+      if (videoTracks.isEmpty) {
+        debugPrint('No video tracks available, renegotiating to add video');
+        _currentCall!.voiceOnly = false;
+        await _helper.renegotiate(
+          call: _currentCall!,
+          voiceOnly: false,
+          done: (response) {
+            debugPrint(
+              'Video renegotiation completed: ${response?.status_code}',
+            );
+            if (response?.status_code != 200) {
+              _lastCallError = 'Failed to enable video';
+            }
+            notifyListeners();
+          },
+        );
       } else {
-        _currentCall!.unmute(true, true);
+        final isEnabled = videoTracks.any((track) => track.enabled);
+        for (var track in videoTracks) {
+          track.enabled = !isEnabled;
+        }
+        debugPrint('Video toggled: ${!isEnabled}');
       }
     } catch (e) {
       debugPrint('Error toggling video: $e');
