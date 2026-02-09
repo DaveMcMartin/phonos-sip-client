@@ -25,12 +25,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
 
   TransportType _selectedProtocol = TransportType.WS;
   DtmfMode _selectedDtmfMode = DtmfMode.RFC2833;
-  String? _selectedCodec;
   bool _useSsl = true;
   RegistrationStateEnum? _lastRegistrationState;
   late SipService _sipService;
-
-  final List<String> _availableCodecs = ['OPUS', 'PCMU', 'PCMA', 'G722'];
 
   @override
   void initState() {
@@ -90,7 +87,6 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
     _userAgentController.text = config.userAgent ?? '';
     _selectedProtocol = config.protocol;
     _selectedDtmfMode = config.dtmfMode ?? DtmfMode.RFC2833;
-    _selectedCodec = config.codec;
     _useSsl = config.useSsl;
     _iceServersController.text = config.iceServers
         .map((ice) => ice.urls)
@@ -127,7 +123,6 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
           ? null
           : _userAgentController.text,
       dtmfMode: _selectedDtmfMode,
-      codec: _selectedCodec,
     );
 
     final sipService = context.read<SipService>();
@@ -447,30 +442,6 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                     _selectedDtmfMode = value;
                   });
                 }
-              },
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<String>(
-              value: _selectedCodec,
-              decoration: const InputDecoration(
-                labelText: 'Preferred Codec',
-                prefixIcon: Icon(Icons.music_note),
-                border: OutlineInputBorder(),
-                hintText: 'Default',
-              ),
-              items: [
-                const DropdownMenuItem<String>(
-                  value: null,
-                  child: Text('Default (Recommended)'),
-                ),
-                ..._availableCodecs.map((codec) {
-                  return DropdownMenuItem(value: codec, child: Text(codec));
-                }),
-              ],
-              onChanged: (value) {
-                setState(() {
-                  _selectedCodec = value;
-                });
               },
             ),
           ],

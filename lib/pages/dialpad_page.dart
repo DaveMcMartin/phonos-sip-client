@@ -268,7 +268,10 @@ class CallScreen extends StatelessWidget {
     final callState = call.state;
     final remoteNumber = call.remote_identity ?? 'Unknown';
     final remoteName = call.remote_display_name;
-    final hasVideo = !call.voiceOnly;
+    final hasVideo =
+        !call.voiceOnly ||
+        sipService.hasRemoteVideo ||
+        sipService.isCameraEnabled;
 
     return Scaffold(
       body: Stack(
@@ -483,6 +486,16 @@ class CallScreen extends StatelessWidget {
               label: 'Mute',
               onPressed: sipService.toggleMute,
               isActive: sipService.isMuted,
+              hasVideo: hasVideo,
+            ),
+            const SizedBox(width: 24),
+            _buildActionButton(
+              icon: sipService.isCameraEnabled
+                  ? Icons.videocam
+                  : Icons.videocam_off,
+              label: 'Camera',
+              onPressed: sipService.toggleVideo,
+              isActive: sipService.isCameraEnabled,
               hasVideo: hasVideo,
             ),
             const SizedBox(width: 24),

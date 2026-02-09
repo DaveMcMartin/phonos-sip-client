@@ -17,6 +17,10 @@ A beautiful, open-source desktop SIP client built with Flutter for Windows, macO
 *   **Modern UI:** Clean Material Design 3 interface.
 *   **Codecs:** Configurable preferred codecs (Opus, G722, PCMA, PCMU).
 
+## Motivation
+
+I couldn't find a good SIP desktop client app.
+
 ## Getting Started
 
 1.  **Clone:** `git clone <repo>`

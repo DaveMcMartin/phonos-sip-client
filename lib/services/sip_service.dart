@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:sip_ua/sip_ua.dart';
 import 'package:uuid/uuid.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -8,6 +9,8 @@ import '../models/sip_configuration.dart';
 import '../models/call_history_entry.dart';
 import '../repositories/call_history_repository.dart';
 import '../repositories/configuration_repository.dart';
+
+import 'dart:io';
 
 class SipService extends ChangeNotifier implements SipUaHelperListener {
   final SIPUAHelper _helper = SIPUAHelper();
@@ -72,12 +75,39 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
 
   bool get isOnHold => _currentCall?.state == CallStateEnum.HOLD;
 
+  bool get isCameraEnabled =>
+      _localStream?.getVideoTracks().any((track) => track.enabled) ?? false;
+
+  bool get hasRemoteVideo =>
+      _remoteStream?.getVideoTracks().any((track) => track.enabled) ?? false;
+
   SipService() {
     _helper.addSipUaHelperListener(this);
     _initialize();
   }
 
+  Future<void> _checkPermissions() async {
+    if (kIsWeb) return;
+
+    try {
+      if (Platform.isAndroid || Platform.isIOS || Platform.isMacOS) {
+        var microphoneStatus = await Permission.microphone.status;
+        if (microphoneStatus.isDenied) {
+          await Permission.microphone.request();
+        }
+
+        var cameraStatus = await Permission.camera.status;
+        if (cameraStatus.isDenied) {
+          await Permission.camera.request();
+        }
+      }
+    } catch (e) {
+      debugPrint('Warning: Failed to check/request permissions: $e');
+    }
+  }
+
   Future<void> _initialize() async {
+    await _checkPermissions();
     await _localRenderer.initialize();
     await _remoteRenderer.initialize();
 
@@ -172,11 +202,11 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
   }
 
   Future<void> call(String destination, {bool video = false}) async {
+    await _checkPermissions();
     if (!isRegistered) {
       throw Exception('Not registered');
     }
 
-    final options = _helper.buildCallOptions(!video);
     _helper.call(destination, voiceOnly: !video);
     _dialedNumber = destination;
     _lastCallError = null;
@@ -184,6 +214,7 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
   }
 
   Future<void> answer({bool video = false}) async {
+    await _checkPermissions();
     if (_currentCall == null) return;
 
     final options = _helper.buildCallOptions(!video);
@@ -212,6 +243,26 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
       _currentCall!.unmute(true, false);
     } else {
       _currentCall!.mute(true, false);
+    }
+    notifyListeners();
+  }
+
+  Future<void> toggleVideo() async {
+    await _checkPermissions();
+    if (_currentCall == null) return;
+
+    try {
+      final hasVideo =
+          _localStream?.getVideoTracks().any((track) => track.enabled) ?? false;
+
+      if (hasVideo) {
+        _currentCall!.mute(false, true);
+      } else {
+        _currentCall!.unmute(true, true);
+      }
+    } catch (e) {
+      debugPrint('Error toggling video: $e');
+      _lastCallError = 'Failed to toggle video: $e';
     }
     notifyListeners();
   }
@@ -349,7 +400,7 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
 
   void _handleStreams(CallState state) {
     if (state.stream != null) {
-      if (state.originator == 'local') {
+      if (state.originator == Originator.local) {
         _localRenderer.srcObject = state.stream;
         _localStream = state.stream;
       } else {
@@ -388,6 +439,9 @@ class SipService extends ChangeNotifier implements SipUaHelperListener {
   @override
   void onNewReinvite(ReInvite event) {
     debugPrint('Received ReInvite');
+    if (event.accept != null) {
+      event.accept!(<String, dynamic>{});
+    }
   }
 
   @override

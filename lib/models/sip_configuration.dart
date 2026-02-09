@@ -34,7 +34,6 @@ class SipConfiguration {
   final String? wsUrl;
   final String? userAgent;
   final DtmfMode? dtmfMode;
-  final String? codec;
 
   SipConfiguration({
     required this.username,
@@ -49,7 +48,6 @@ class SipConfiguration {
     this.wsUrl,
     this.userAgent,
     this.dtmfMode,
-    this.codec,
   });
 
   String get webSocketUrl {
@@ -75,7 +73,6 @@ class SipConfiguration {
     if (wsUrl != null) 'wsUrl': wsUrl,
     if (userAgent != null) 'userAgent': userAgent,
     if (dtmfMode != null) 'dtmfMode': dtmfMode!.name,
-    if (codec != null) 'codec': codec,
   };
 
   factory SipConfiguration.fromJson(Map<String, dynamic> json) =>
@@ -106,7 +103,6 @@ class SipConfiguration {
                 orElse: () => DtmfMode.RFC2833,
               )
             : null,
-        codec: json['codec'] as String?,
       );
 
   factory SipConfiguration.defaultConfig() => SipConfiguration(
@@ -138,7 +134,6 @@ class SipConfiguration {
     String? wsUrl,
     String? userAgent,
     DtmfMode? dtmfMode,
-    String? codec,
   }) => SipConfiguration(
     username: username ?? this.username,
     password: password ?? this.password,
@@ -152,6 +147,5 @@ class SipConfiguration {
     wsUrl: wsUrl ?? this.wsUrl,
     userAgent: userAgent ?? this.userAgent,
     dtmfMode: dtmfMode ?? this.dtmfMode,
-    codec: codec ?? this.codec,
   );
 }
